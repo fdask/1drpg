@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>1D RPG</title>
+		<script src='//code.jquery.com/jquery-1.10.2.min.js'></script>
+		<style>
+		#drawspace {
+			border: 1px dashed black;
+		}
+
+		#compass {
+			border: 1px solid black;
+		}
+		</style>
+	</head>
+	<body>
+		<pre>W A S D to move</pre>
+		<canvas id='drawspace' width='550' height='300'></canvas>
+		<canvas id='compass' width='500' height='30'></canvas>
+		<script>
+		var caveImg = new Image();
+		caveImg.src = 'cave.png';
+
+		$(document).ready(function () {
+			$("body").keypress(function (e) {
+				switch (e.which) {
+					case 97:
+						// left
+						viewPort.angle = viewPort.angle - viewPort.rotateSpeed;
+
+						if (viewPort.angle <= 0) {
+							viewPort.angle = 360;
+						}
+	
+						break;
+					case 100:
+						// right
+						viewPort.angle = viewPort.angle + viewPort.rotateSpeed;
+
+						if (viewPort.angle >= 360) {
+							viewPort.angle = 0;
+						}
+
+						break;
+					case 119:
+						// forward
+						viewPort.forward();
+						break;
+					case 115:
+						// back
+						viewPort.back();
+						break;
+					default:
+						console.log(e.which);
+						break;
+				}
+		
+				canvas.draw();
+			});
+
+			canvas.draw();
+		});
+
+		var place = {
+			x : 0,
+			y : 0,
+			size: 2,
+
+			init : function () {
+				var canvas = document.getElementById('drawspace');
+				this.x = Math.floor((Math.random() * canvas.width) + 1);
+				this.y = Math.floor((Math.random() * canvas.height) + 1);
+			},
+
+			draw : function () {
+				if (this.x === 0 && this.y === 0) {
+					this.init();
+				}
+
+				var canvas = document.getElementById('drawspace');
+				var context = canvas.getContext('2d');
+
+				context.fillStyle = '#000000';
+				context.fillRect(this.x, this.y, this.size, this.size);
+			}
+		};
+
+		var viewPort = {
+			// the origin point of the viewport
+			origX : 80,
+			origY : 80,
+
+			// the speed of movement
+			moveSpeed : 2,
+
+			// the speed of rotation
+			rotateSpeed : 3,
+
+			// the angle of the left side of the viewport
+			angle : 0,
+
+			// width (in degrees) of the viewport
+			width: 80,
+
+			// how far out the viewport can see (radius)
+			length: 50,
+
+			// color to fill the viewport
+			fillStyle: 'red',
+
+			forward: function () {
+				var midRad = (this.angle + (this.width / 2)) * (Math.PI / 180);
+				var endX = this.origX + this.length * Math.cos(midRad);
+				var endY = this.origY + this.length * Math.sin(midRad);
+
+				var moveX = Math.cos(midRad) * this.moveSpeed;
+				var moveY = Math.sin(midRad) * this.moveSpeed;
+
+				this.origX = this.origX + moveX;
+				this.origY = this.origY + moveY;
+			},
+
+			back: function () {
+				var midRad = ((this.angle + (this.width / 2)) + 180) * (Math.PI / 180);
+				var endX = this.origX + this.length * Math.cos(midRad);
+				var endY = this.origY + this.length * Math.sin(midRad);
+
+				var moveX = Math.cos(midRad);
+				var moveY = Math.sin(midRad);
+
+				this.origX = this.origX + moveX;
+				this.origY = this.origY + moveY;
+			},
+
+			draw : function () {
+				var canvas = document.getElementById('drawspace');
+				var context = canvas.getContext('2d');
+
+				// get the radians
+				var startRad = viewPort.angle * (Math.PI / 180);
+				var endRad = (viewPort.angle + viewPort.width) * (Math.PI / 180);
+
+				context.beginPath();
+				context.moveTo(viewPort.origX, viewPort.origY);
+				context.arc(viewPort.origX, viewPort.origY, viewPort.length, startRad, endRad, false);
+				context.closePath();
+				context.fillStyle = this.fillStyle;
+				context.fill();
+				context.stroke();
+			}
+		};
+
+		var canvas = {
+			draw : function () {
+				this.clear();
+
+				viewPort.draw();
+				place.draw();	
+				compass.draw();
+			},
+
+			clear : function () {
+				var canvas = document.getElementById('drawspace');
+				var context = canvas.getContext('2d');
+
+				var w = canvas.offsetWidth;
+				var h = canvas.offsetHeight;
+
+				context.clearRect(0, 0, w, h);
+			}
+		}
+
+	 	var compass = {
+			draw : function () {
+				this.clear();
+
+				var cmpDiv = document.getElementById('compass');
+				var context = cmpDiv.getContext('2d');
+				context.font = "bold 18pt Courier";
+				context.textBaseline = "top";
+
+				// lets get the viewport angles
+				var midAngle = viewPort.angle + (viewPort.width / 2);
+				var startAngle = viewPort.angle;
+				var endAngle = viewPort.angle + viewPort.width;
+
+				// calc the compass step size (degree to px)
+				var stepSize = cmpDiv.width / viewPort.width;
+
+				// draw the compass directions
+				if (startAngle <= 90 && endAngle >= 90) {
+					// we are facing south
+					var offsetX = 90 - startAngle;
+
+					context.fillText("S", offsetX * stepSize, 2);
+				} else if (startAngle <= 180 && endAngle >= 180) {
+					// we are facing west
+					var offsetX = 180 - startAngle;
+
+					context.fillText("W", offsetX * stepSize, 2);
+				} else if (startAngle <= 270 && endAngle >= 270) {
+					// we are facing north
+					var offsetX = 270 - startAngle;
+
+					context.fillText("N", offsetX * stepSize, 2);
+				} else if (startAngle <= 360 && endAngle >= 0) {
+					// we are facing east
+					var offsetX = 360 - startAngle;
+
+					context.fillText("E", offsetX * stepSize, 2);
+				}
+	
+				// draw the objects/locations
+				startRads = viewPort.angle * (Math.PI / 180);
+				endRads = (viewPort.angle + viewPort.width) * (Math.PI / 180);
+
+				if (isInsideSector(
+					place, 
+					{ x : viewPort.origX, y : viewPort.origY }, 
+					{ x : Math.cos(startRads), y: Math.sin(startRads) },
+					{ x : Math.cos(endRads), y: Math.sin(endRads) },
+					viewPort.length * viewPort.length
+				)) {
+					viewPort.fillStyle = 'green';
+
+					// calculate the distance from the origin point of the dest point
+					var dist = Math.sqrt(Math.pow((viewPort.origX - place.x), 2) + Math.pow((viewPort.origY - place.y), 2));	
+
+					// CALCULATE THE ANGLE BETWEEN TWO POINTS
+					
+					// we need the first vector.  which is the circle centerpoint, to the viewport left edge endpoint
+
+					// get the endpoint of the left line of the viewPort
+					var tx = viewPort.origX + viewPort.length * Math.cos(viewPort.angle * (Math.PI / 180));
+					var ty = viewPort.origY + viewPort.length * Math.sin(viewPort.angle * (Math.PI / 180));
+
+					// now calculate that vector
+					var vx1 = tx - viewPort.origX;
+					var vy1 = ty - viewPort.origY;
+	
+					// now we have to calculate a vector from the place point to the center point of the circle
+					var vx2 = place.x - viewPort.origX;
+					var vy2 = place.y - viewPort.origY;
+
+					// now we calculate the dot product of the two vectors
+					var dp = (vx1 * vx2 + vy1 * vy2);
+
+					// now calculate the magnitudes
+					var mag = Math.sqrt(Math.pow(vx1, 2) + Math.pow(vy1, 2)) * Math.sqrt(Math.pow(vx2, 2) + Math.pow(vy2, 2));
+
+					var angle = Math.acos(dp / mag) * (180 / Math.PI);
+
+					// calc the compass step size (degree to px)
+					var cmpDiv = document.getElementById('compass');
+					var context = cmpDiv.getContext('2d');
+
+					var stepSize = cmpDiv.width / viewPort.width;
+
+					// calculate the scaling on the image	
+					if (caveImg.height > cmpDiv.height) {
+						var ratio = cmpDiv.height / caveImg.height;
+
+						var dy = cmpDiv.height;
+						var dx = caveImg.width * ratio;
+					}	
+						
+					context.drawImage(caveImg, cmpDiv.width - ((viewPort.width - angle) * stepSize), 0, dx, dy);
+				} else {
+					viewPort.fillStyle = 'red';
+				}		
+			},
+
+			clear : function () {
+				var canvas = document.getElementById('compass');
+				var context = canvas.getContext('2d');
+
+				var w = canvas.width;
+				var h = canvas.height;
+
+				context.clearRect(0, 0, w, h);
+			}
+		};
+
+		function isInsideSector(point, center, sectorStart, sectorEnd, radiusSquared) {
+        var relPoint = {
+          x: point.x - center.x,
+          y: point.y - center.y
+        };
+
+        return !areClockwise(sectorStart, relPoint) &&
+               areClockwise(sectorEnd, relPoint) &&
+               isWithinRadius(relPoint, radiusSquared);
+      }
+
+      function areClockwise(v1, v2) {
+        return -v1.x*v2.y + v1.y*v2.x > 0;
+      }
+
+      function isWithinRadius(v, radiusSquared) {
+        return v.x*v.x + v.y*v.y <= radiusSquared;
+      }
+		</script>
+	</body>
+</html>
