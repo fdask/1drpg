@@ -19,13 +19,67 @@
 		<canvas id='drawspace' width='550' height='300'></canvas>
 		<canvas id='compass' width='500' height='30'></canvas>
 		<script>
+		(function() {
+			var lastTime = 0;
+			var vendors = ['ms', 'moz', 'webkit', 'o'];
+
+			for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
+				window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
+				window.cancelAnimationFrame = window[vendors[x]+'CancelAnimationFrame'] || window[vendors[x]+'CancelRequestAnimationFrame'];
+			}
+ 
+			if (!window.requestAnimationFrame) {
+				window.requestAnimationFrame = function(callback, element) {
+					var currTime = new Date().getTime();
+					var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+
+					var id = window.setTimeout(function() { 
+						callback(currTime + timeToCall); 
+					}, timeToCall);
+
+					lastTime = currTime + timeToCall;
+					return id;
+				};
+			}
+ 
+			if (!window.cancelAnimationFrame) {
+				window.cancelAnimationFrame = function(id) {
+					clearTimeout(id);
+				};
+			}
+		}());
+
+		// collect all the keys currently depressed here
+		var keysDown = [];
+
+		// set up the image
 		var caveImg = new Image();
 		caveImg.src = 'cave.png';
 
-		$(document).ready(function () {
-			$("body").keypress(function (e) {
-				switch (e.which) {
-					case 97:
+		var fps = 20;
+
+		function tick() {
+			setTimeout(function() {
+				requestAnimationFrame(tick);
+
+				// handle keypresses
+				if (keysDown.length) {
+					keypressProcess();
+				}
+
+				// redraw the screen
+				canvas.draw();
+			}, 1000 / fps);
+		}
+
+		window.requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
+
+		requestAnimationFrame(tick);
+
+		function keypressProcess() {
+			for (var x = 0; x < keysDown.length; x++) {
+				switch(keysDown[x]) {
+					case 65:
 						// left
 						viewPort.angle = viewPort.angle - viewPort.rotateSpeed;
 
@@ -34,7 +88,7 @@
 						}
 	
 						break;
-					case 100:
+					case 68:
 						// right
 						viewPort.angle = viewPort.angle + viewPort.rotateSpeed;
 
@@ -43,23 +97,43 @@
 						}
 
 						break;
-					case 119:
+					case 87:
 						// forward
 						viewPort.forward();
 						break;
-					case 115:
+					case 83:
 						// back
 						viewPort.back();
 						break;
 					default:
-						console.log(e.which);
+						console.log("Unhandled keypress: " + keysDown[x]);
 						break;
 				}
-		
-				canvas.draw();
+			}
+		}
+
+		$(document).ready(function () {
+			// handle adding keypresses to array
+			$("body").keydown(function (e) {
+				if ([97, 100, 119, 115].indexOf(e.which) && keysDown.indexOf(e.which) == -1) {
+					keysDown.push(e.which);
+					console.log(keysDown);
+				} 
 			});
 
-			canvas.draw();
+			// handle removing keypresses from array
+			$("body").keyup(function (e) {
+				if ([97, 100, 119, 115].indexOf(e.which)) {
+					keysDown.splice(keysDown.indexOf(e.which), 1);
+					console.log(keysDown);
+				}
+			});
+
+			// catch an onblur 
+			window.onblur = function() {
+				keysDown = [];
+				console.log(keysDown);
+			}
 		});
 
 		var place = {
